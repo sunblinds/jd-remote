@@ -87,6 +87,9 @@ def delete(entry_id: int) -> bool:
         return c.execute("DELETE FROM add_history WHERE id=?", (entry_id,)).rowcount > 0
 
 
-def clear() -> int:
+def clear(q: str | None = None) -> int:
+    """전부 지우거나, q 가 있으면 목록 검색과 같은 조건(링크·경로·파일명)에 맞는 것만 지운다."""
     with closing(_conn()) as c, c:
+        if q:
+            return c.execute("DELETE FROM add_history WHERE urls LIKE ? OR dest LIKE ? OR files LIKE ?", [f"%{q}%"] * 3).rowcount
         return c.execute("DELETE FROM add_history").rowcount

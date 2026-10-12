@@ -380,8 +380,8 @@ async def history_delete(entry_id: int) -> dict:
 
 
 @router.delete("/history")
-async def history_clear() -> dict:
-    return {"deleted": history.clear()}
+async def history_clear(q: str | None = None) -> dict:
+    return {"deleted": history.clear((q or "").strip() or None)}
 
 
 class Ids(BaseModel):

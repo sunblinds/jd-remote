@@ -394,7 +394,7 @@
   }
   function renderHistory() {
     $('#histList').innerHTML = hist.items.map(histCard).join('');
-    $('#histEmpty').hidden = hist.items.length > 0; $('#histMore').hidden = hist.done || !hist.items.length;
+    $('#histEmpty').hidden = hist.items.length > 0; $('#histClear').hidden = !hist.items.length; $('#histClear').textContent = hist.q ? '검색 결과 삭제' : '전체 삭제'; $('#histMore').hidden = hist.done || !hist.items.length;
     const find = (id) => hist.items.find((h) => h.id === +id);
     $$('#histList [data-copy]').forEach((b) => b.addEventListener('click', () => { const [id, i] = b.dataset.copy.split(':'); copyText(find(id).urls[+i], '링크'); }));
     $$('#histList [data-copyall]').forEach((b) => b.addEventListener('click', () => { const h = find(b.dataset.copyall); copyText(h.urls.join('\n'), `링크 ${h.urls.length}개`); }));
@@ -432,6 +432,14 @@
     }, 4000);
   }
   $('#histMore').addEventListener('click', () => loadHistory(false));
+  // 일괄 삭제: 검색어가 있으면 '검색 결과만', 없으면 전체. 다운로드에는 영향 없음.
+  $('#histClear').addEventListener('click', async () => {
+    const q = hist.q;
+    const msg = q ? `'${q}' 검색 결과 이력을 모두 삭제할까요?` : '추가 이력을 전부 삭제할까요?';
+    if (!confirm(msg + '\n(이미 추가된 다운로드에는 영향 없음)')) return;
+    try { const r = await api('/history' + (q ? '?q=' + encodeURIComponent(q) : ''), { method: 'DELETE' }); toast(`이력 ${r.deleted}건 삭제`); loadHistory(true); }
+    catch (e) { toast('삭제 실패: ' + e.message, true); }
+  });
   let histT; $('#histQ').addEventListener('input', (e) => { clearTimeout(histT); histT = setTimeout(() => { hist.q = e.target.value.trim(); loadHistory(true); }, 300); });
   $('#btnAddCart').addEventListener('click', () => addLinks(false));
   $('#btnAddNow').addEventListener('click', () => addLinks(true));

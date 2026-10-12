@@ -380,3 +380,11 @@ def test_history_migrates_old_db_without_files_column(client):
                   " autostart INTEGER NOT NULL DEFAULT 0, dest TEXT, urls TEXT NOT NULL)")
         c.execute("INSERT INTO add_history(ts,urls) VALUES (1, '[\"https://old.example\"]')")
     assert client.get("/api/history").json()[0]["files"] is None
+
+
+def test_history_clear_by_query_keeps_others(client):
+    client.post("/api/links", json={"text": "https://keep.example/a"})
+    client.post("/api/links", json={"text": "https://drop.example/b"})
+    client.post("/api/links", json={"text": "https://drop.example/c"})
+    assert client.delete("/api/history?q=drop.example").json()["deleted"] == 2
+    assert [r["urls"][0] for r in client.get("/api/history").json()] == ["https://keep.example/a"]
