@@ -193,4 +193,10 @@ details.adv .field{padding-top:4px}
 .card.hist .hl{display:flex;align-items:center;gap:6px;font-size:13px}
 .card.hist .hl .u{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);user-select:text;-webkit-user-select:text}
 .icon-btn.sm{width:32px;height:32px;font-size:15px;flex:none}
+.card.hist .hfiles{display:flex;flex-direction:column;gap:2px}
+.card.hist .hflist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.card.hist .hf{display:flex;align-items:baseline;gap:8px;font-size:13px}
+.card.hist .hf .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:text;-webkit-user-select:text}
+.card.hist .hf .s{flex:none;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.card.hist .hfiles summary{cursor:pointer;padding:2px 0}
 .card.hist .row-actions{display:flex;gap:6px;flex-wrap:wrap}

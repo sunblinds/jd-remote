@@ -332,3 +332,51 @@ def test_history_failure_does_not_block_add(client, monkeypatch):
 def test_history_requires_auth(client):
     client.cookies.clear()
     assert client.get("/api/history").status_code == 401
+
+
+def _wait(cond, timeout=3.0):
+    end = time.time() + timeout
+    while time.time() < end and not cond():
+        time.sleep(0.02)
+    return cond()
+
+
+def test_history_fills_checked_files_for_cart_add(client, monkeypatch):
+    from app import api
+    monkeypatch.setattr(api, "HISTORY_WATCH_EVERY", 0.01)
+    f = client.fake
+    r = client.post("/api/links", json={"text": "https://x.example/a https://bad.example/z"}).json()
+    assert r["jobId"] is None                                            # 장바구니: 응답엔 작업 id 를 내보내지 않는다
+    assert next(c for c in f.calls if c[0] == "add_links")[4] is True     # 하지만 이력용으로 작업 id 는 받는다
+    assert client.get("/api/history").json()[0]["files"] is None          # 아직 검증 전
+    f.grabber = [
+        {"uuid": 1, "packageUUID": 9, "availability": "ONLINE", "url": "https://x.example/a", "name": "movie.mkv",
+         "bytesTotal": 2048, "host": "x.example", "job": 901},
+        {"uuid": 2, "packageUUID": 9, "availability": "OFFLINE", "url": "https://bad.example/z", "name": "z", "job": 901},
+    ]
+    assert _wait(lambda: client.get("/api/history").json()[0]["files"] is not None)
+    row = client.get("/api/history").json()[0]
+    assert row["files"] == [{"name": "movie.mkv", "size": 2048, "host": "x.example"}]   # 오프라인 링크는 남기지 않는다
+    assert [h["id"] for h in client.get("/api/history?q=movie").json()] == [row["id"]]
+
+
+def test_history_keeps_files_moved_by_autostart(client, monkeypatch):
+    from app import api
+    monkeypatch.setattr(api, "HISTORY_WATCH_EVERY", 0.5)
+    f = client.fake
+    client.post("/api/links", json={"text": "https://x.example/a", "autostart": True})
+    f.grabber = [{"uuid": 1, "packageUUID": 9, "availability": "ONLINE", "name": "game.iso", "bytesTotal": 10, "host": "x", "job": 901}]
+    client.get("/api/state")                    # 폴링이 먼저 옮겨 장바구니에서 사라져도 파일 정보는 남아야 한다
+    assert f.moved == [[1]] and f.grabber == []
+    assert _wait(lambda: client.get("/api/history").json()[0]["files"] is not None)
+    assert client.get("/api/history").json()[0]["files"] == [{"name": "game.iso", "size": 10, "host": "x"}]
+
+
+def test_history_migrates_old_db_without_files_column(client):
+    import sqlite3
+    from app import history
+    with sqlite3.connect(history.DB_PATH) as c:
+        c.execute("CREATE TABLE add_history (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, user TEXT,"
+                  " autostart INTEGER NOT NULL DEFAULT 0, dest TEXT, urls TEXT NOT NULL)")
+        c.execute("INSERT INTO add_history(ts,urls) VALUES (1, '[\"https://old.example\"]')")
+    assert client.get("/api/history").json()[0]["files"] is None

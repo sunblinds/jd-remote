@@ -144,7 +144,7 @@ def plan_autostart(links: list[dict]) -> tuple[list[int], bool]:
     return move, not checking
 
 
-async def _process_autostart(jd: JDClient, jobs: dict[int, dict]) -> bool:
+async def _process_autostart(jd: JDClient, jobs: dict[int, dict], watch: dict[int, dict] | None = None) -> bool:
     """폴링마다 호출. 즉시 다운로드 작업 중 검증이 끝난(ONLINE) 링크만 다운로드 목록으로 옮기고 컨트롤러를 켠다.
     JD 의 autostart 플래그 대신 이렇게 하는 이유: 그 플래그는 장바구니의 다른 링크까지 전부 확정해 버린다."""
     started = False
@@ -153,6 +153,8 @@ async def _process_autostart(jd: JDClient, jobs: dict[int, dict]) -> bool:
             links = await jd.grabber_links_by_jobs([j])
         except (JDError, JDUnavailable):
             continue
+        if watch and j in watch:
+            _note_files(watch[j], links)          # 옮기면 장바구니에서 사라지므로 그 전에 이력용 파일 정보를 남긴다
         move, done = plan_autostart(links)
         if move:
             try:
@@ -164,6 +166,48 @@ async def _process_autostart(jd: JDClient, jobs: dict[int, dict]) -> bool:
         if done:
             del jobs[j]
     return started
+
+
+# ── 추가 이력: 무슨 파일인지 ────────────────────────────────────────────────
+HISTORY_WATCH_TTL = 300.0   # 추가한 작업의 검증 결과를 기다리는 최대 시간(초)
+HISTORY_WATCH_EVERY = 3.0
+
+
+def _note_files(w: dict, links: list[dict]) -> bool:
+    """검증이 끝난(ONLINE) 링크의 이름·크기·호스트를 w["files"] 에 모은다. 새로 생긴 게 있으면 True."""
+    added = False
+    for l in links:
+        if (l.get("availability") or "").upper() == "ONLINE" and l.get("uuid") not in w["files"]:
+            w["files"][l.get("uuid")] = {"name": _clean_name(l.get("name")), "size": l.get("bytesTotal") or 0, "host": l.get("host")}
+            added = True
+    return added
+
+
+async def _watch_history_files(app, job_id: int, hid: int) -> None:
+    """추가 직후부터 그 작업(job)의 링크 검증을 지켜보다가, 확인된 파일 목록을 이력에 적는다.
+    서버 쪽에서 돌아서 앱을 닫아도 채워진다. 이상한(오프라인·미지원) 링크는 파일 정보가 없으니 남지 않는다."""
+    watch: dict[int, dict] = app.state.history_watch
+    w = watch[job_id] = {"hid": hid, "files": {}}
+    saved = -1
+    deadline = time.time() + HISTORY_WATCH_TTL
+    try:
+        while time.time() < deadline:
+            await asyncio.sleep(HISTORY_WATCH_EVERY)
+            try:
+                links = await app.state.jd.grabber_links_by_jobs([job_id])
+            except (JDError, JDUnavailable):
+                continue
+            _note_files(w, links)
+            if len(w["files"]) != saved:
+                history.set_files(hid, list(w["files"].values()))
+                saved = len(w["files"])
+            checking = any((l.get("availability") or "UNKNOWN").upper() == "UNKNOWN" for l in links)
+            # 링크가 다 검증됐거나, 즉시 다운로드로 모두 옮겨져 장바구니에서 사라졌으면 끝
+            if (links and not checking) or (not links and w["files"]):
+                break
+    finally:
+        watch.pop(job_id, None)
+        history.set_files(hid, list(w["files"].values()))   # 끝내 확인된 게 없으면 [] — '검증 중' 표시를 멈춘다
 
 
 def _link_view(l: dict) -> dict:
@@ -201,7 +245,7 @@ async def state(request: Request) -> dict[str, Any]:
     s = _settings(request)
     jobs = _pending_jobs(request)
     if jobs:
-        await _process_autostart(jd, jobs)      # 검증 끝난 즉시 다운로드 링크를 먼저 옮긴 뒤 상태를 읽는다
+        await _process_autostart(jd, jobs, request.app.state.history_watch)   # 검증 끝난 즉시 다운로드 링크를 먼저 옮긴 뒤 상태를 읽는다
     try:
         st, pkgs, glinks, gpkgs, collecting, limit, caps, accts = await asyncio.gather(
             jd.state(), jd.packages(), jd.grabber_links(), jd.grabber_packages(),
@@ -306,14 +350,20 @@ async def add_links(body: AddLinks, request: Request) -> dict:
     s = _settings(request)
     dest = _dest_path(body.destFolder, s)
     # 즉시 다운로드도 JD 에는 autostart=False 로 넣는다. 작업 id 를 받아 두고, 폴링 때 그 작업의 링크만 옮긴다.
-    r = await _guard(_jd(request).add_links(urls, body.packageName or None, dest, autostart=False, assign_job_id=body.autostart))
+    # 장바구니도 작업 id 를 받는다 — 이력에 그 작업의 검증된 파일 목록을 채우는 데 쓴다.
+    r = await _guard(_jd(request).add_links(urls, body.packageName or None, dest, autostart=False, assign_job_id=True))
     job_id = (r or {}).get("id") if isinstance(r, dict) else None
     if body.autostart and job_id is not None:
         _pending_jobs(request)[int(job_id)] = {"ts": time.time(), "links": set()}
     # 이력: 화면에 보인 저장 위치(사용자 입력) 그대로 남겨 '다시 추가' 때 그대로 채운다
     user = request.app.state.auth.verify(request.app.state.auth.session_token(request))
     hid = history.record(urls, body.autostart, (body.destFolder or "").strip() or None, user)
-    return {"added": len(urls), "urls": urls, "autostart": body.autostart, "jobId": job_id, "historyId": hid}
+    if hid is not None and job_id is not None:
+        t = asyncio.create_task(_watch_history_files(request.app, int(job_id), hid))
+        tasks: set = request.app.state.history_tasks
+        tasks.add(t); t.add_done_callback(tasks.discard)
+    return {"added": len(urls), "urls": urls, "autostart": body.autostart,
+            "jobId": job_id if body.autostart else None, "historyId": hid}
 
 
 # ── 추가 이력 ────────────────────────────────────────────────────────────

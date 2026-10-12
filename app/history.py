@@ -1,6 +1,7 @@
 """링크 추가 이력 — 내장 SQLite(/data/history.db, named volume jdr-data).
 
 추가할 때마다 한 줄: 시각, 사용자, 방식(장바구니/즉시), 저장 위치(화면에 보인 값), 링크 목록.
+검증이 끝나면(ONLINE) 그 링크들이 어떤 파일인지(이름·크기·호스트)를 files 에 채운다 — None 은 아직 모름.
 가볍게 유지하려고 최근 MAX_ROWS 건만 남긴다. 쓰기 실패는 링크 추가 자체를 막지 않는다.
 """
 from __future__ import annotations
@@ -21,7 +22,8 @@ CREATE TABLE IF NOT EXISTS add_history (
     user      TEXT,
     autostart INTEGER NOT NULL DEFAULT 0,
     dest      TEXT,
-    urls      TEXT    NOT NULL           -- JSON 배열
+    urls      TEXT    NOT NULL,          -- JSON 배열
+    files     TEXT                       -- JSON 배열 [{name,size,host}] | NULL(아직 검증 전)
 );
 CREATE INDEX IF NOT EXISTS add_history_ts ON add_history(ts DESC);
 """
@@ -31,11 +33,14 @@ def _conn() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
     c = sqlite3.connect(DB_PATH, timeout=5)
     c.executescript(_SCHEMA)
+    if "files" not in {r[1] for r in c.execute("PRAGMA table_info(add_history)")}:   # 이전 버전 DB
+        c.execute("ALTER TABLE add_history ADD COLUMN files TEXT")
     return c
 
 
 def _row(r) -> dict:
-    return {"id": r[0], "ts": r[1], "user": r[2], "autostart": bool(r[3]), "dest": r[4], "urls": json.loads(r[5])}
+    return {"id": r[0], "ts": r[1], "user": r[2], "autostart": bool(r[3]), "dest": r[4], "urls": json.loads(r[5]),
+            "files": json.loads(r[6]) if r[6] else None}
 
 
 def record(urls: list[str], autostart: bool, dest: str | None, user: str | None) -> int | None:
@@ -49,12 +54,20 @@ def record(urls: list[str], autostart: bool, dest: str | None, user: str | None)
         return None
 
 
+def set_files(entry_id: int, files: list[dict]) -> None:
+    try:
+        with closing(_conn()) as c, c:
+            c.execute("UPDATE add_history SET files=? WHERE id=?", (json.dumps(files, ensure_ascii=False), entry_id))
+    except (sqlite3.Error, OSError):
+        pass
+
+
 def list_(limit: int = 30, before_id: int | None = None, q: str | None = None) -> list[dict]:
-    sql, args = "SELECT id,ts,user,autostart,dest,urls FROM add_history WHERE 1=1", []
+    sql, args = "SELECT id,ts,user,autostart,dest,urls,files FROM add_history WHERE 1=1", []
     if before_id:
         sql += " AND id < ?"; args.append(before_id)
     if q:
-        sql += " AND (urls LIKE ? OR dest LIKE ?)"; args += [f"%{q}%", f"%{q}%"]
+        sql += " AND (urls LIKE ? OR dest LIKE ? OR files LIKE ?)"; args += [f"%{q}%"] * 3
     sql += " ORDER BY id DESC LIMIT ?"; args.append(max(1, min(limit, 100)))
     try:
         with closing(_conn()) as c:
@@ -65,7 +78,7 @@ def list_(limit: int = 30, before_id: int | None = None, q: str | None = None) -
 
 def get(entry_id: int) -> dict | None:
     with closing(_conn()) as c:
-        r = c.execute("SELECT id,ts,user,autostart,dest,urls FROM add_history WHERE id=?", (entry_id,)).fetchone()
+        r = c.execute("SELECT id,ts,user,autostart,dest,urls,files FROM add_history WHERE id=?", (entry_id,)).fetchone()
         return _row(r) if r else None
 
 

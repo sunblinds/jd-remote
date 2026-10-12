@@ -364,12 +364,27 @@
     try { await navigator.clipboard.writeText(t); toast(label + ' 복사됨'); }
     catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast(label + ' 복사됨'); } catch (e2) { toast('복사 실패', true); } ta.remove(); }
   }
+  // 파일 정보: null = 아직 검증 결과 없음(추가 직후면 '확인 중'), [] = 확인된 파일 없음(이상한 링크 등)
+  const HIST_CHECK_SEC = 330;   // 서버 HISTORY_WATCH_TTL(300초) + 여유
+  const histChecking = (h) => h.files == null && Date.now() / 1000 - h.ts < HIST_CHECK_SEC;
+  function histFiles(h) {
+    if (histChecking(h)) return '<div class="hfiles muted small">🔎 파일 확인 중…</div>';
+    if (!h.files) return '';
+    if (!h.files.length) return '<div class="hfiles muted small">확인된 파일 없음</div>';
+    const row = (f) => `<li class="hf"><span class="n" title="${esc(f.name)}">📄 ${esc(f.name)}</span><span class="s">${fmtBytes(f.size)}</span></li>`;
+    const total = h.files.reduce((a, f) => a + (f.size || 0), 0);
+    const head = `<div class="meta"><span>파일 ${h.files.length}개 · ${fmtBytes(total)}</span></div>`;
+    const SHOW = 5;
+    const more = h.files.length > SHOW ? `<details><summary class="muted small">외 ${h.files.length - SHOW}개 더 보기</summary><ul class="hflist">${h.files.slice(SHOW).map(row).join('')}</ul></details>` : '';
+    return `<div class="hfiles">${head}<ul class="hflist">${h.files.slice(0, SHOW).map(row).join('')}</ul>${more}</div>`;
+  }
   function histCard(h) {
     const mode = h.autostart ? '<span class="tag running">⬇ 즉시</span>' : '<span class="tag finished">🧺 장바구니</span>';
     const links = h.urls.map((u, i) => `<li class="hl"><span class="u" title="${esc(u)}">${esc(u)}</span><button type="button" class="icon-btn sm" data-copy="${h.id}:${i}" aria-label="복사">📋</button></li>`).join('');
     return `<li class="card hist" data-hid="${h.id}">
       <div class="title"><span class="name">${fmtWhen(h.ts)} · 링크 ${h.urls.length}개</span>${mode}</div>
       ${h.dest ? `<div class="meta"><span>📁 ${esc(h.dest)}</span></div>` : ''}
+      ${histFiles(h)}
       <ul class="hlinks">${links}</ul>
       <div class="row-actions">
         <button type="button" class="btn small" data-copyall="${h.id}">📋 전체 복사</button>
@@ -399,6 +414,22 @@
     const last = hist.items[hist.items.length - 1];
     const qs = new URLSearchParams({ limit: 20 }); if (!reset && last) qs.set('before', last.id); if (hist.q) qs.set('q', hist.q);
     try { const rows = await api('/history?' + qs); hist.items = hist.items.concat(rows); hist.done = rows.length < 20; renderHistory(); } catch (e) {}
+    scheduleHistRefresh();
+  }
+  // 파일 확인 중인 이력이 있으면 추가 탭을 보고 있는 동안 그 줄만 다시 읽어 채운다
+  let histRefreshT;
+  function scheduleHistRefresh() {
+    clearTimeout(histRefreshT);
+    if (!hist.items.some(histChecking)) return;
+    histRefreshT = setTimeout(async () => {
+      if (!$('#tab-add').classList.contains('active') || document.hidden) return scheduleHistRefresh();
+      const qs = new URLSearchParams({ limit: 20 }); if (hist.q) qs.set('q', hist.q);
+      try {
+        const fresh = new Map((await api('/history?' + qs)).map((h) => [h.id, h]));
+        hist.items = hist.items.map((h) => fresh.get(h.id) || h); renderHistory();
+      } catch (e) {}
+      scheduleHistRefresh();
+    }, 4000);
   }
   $('#histMore').addEventListener('click', () => loadHistory(false));
   let histT; $('#histQ').addEventListener('input', (e) => { clearTimeout(histT); histT = setTimeout(() => { hist.q = e.target.value.trim(); loadHistory(true); }, 300); });

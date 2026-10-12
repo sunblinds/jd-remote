@@ -27,7 +27,11 @@ async def lifespan(app: FastAPI):
     app.state.jd = JDClient(s.jd_api_url, timeout=s.jd_timeout_s)
     app.state.lock = LockState()
     app.state.autostart_jobs = {}   # 즉시 다운로드 작업(job) 추적: job_id → {ts, links}. api._pending_jobs 참조
+    app.state.history_watch = {}    # 추가 이력 파일 확인 중인 작업: job_id → {hid, files}. api._watch_history_files 참조
+    app.state.history_tasks = set()
     yield
+    for t in app.state.history_tasks:
+        t.cancel()
     await app.state.jd.aclose()
     await app.state.auth.aclose()
 
