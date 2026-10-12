@@ -76,3 +76,10 @@ jlesage webauth: `POST /login/login` form `username`/`password`, 요청에 쿠�
 - 성공 `{"data":…}`, 실패 `{"src":"DEVICE","type":"…"}`.
 - `downloadcontroller/getSpeedInBytes` 없음 → 패키지 `speed` 합산.
 - 쓰는 메서드: `downloadcontroller/{getCurrentState,start,stop,pause}`, `downloadsV2/{queryPackages,queryLinks,removeLinks,cleanup,setEnabled,resetLinks,forceDownload}`, `linkgrabberv2/{addLinks,queryLinks,queryPackages,isCollecting,moveToDownloadlist,removeLinks}`, `config/{get,set}`(GeneralSettings.DownloadSpeedLimit*), `captcha/list`, `accountsV2/{listAccounts,listPremiumHoster,addAccount,setUserNameAndPassword,enableAccounts,disableAccounts,refreshAccounts,removeAccounts}`.
+
+## 릴리스 (Docker Hub `bytesets/jd-remote`)
+```sh
+scripts/publish-dockerhub.sh 0.7.1      # 커밋된 HEAD 를 v0.7.1 로 태그 → NAS 에서 빌드 → 0.7.1 / 0.7 / latest 푸시
+```
+- 버전은 SemVer: 버그 수정 PATCH, 기능 추가 MINOR, 사용자가 손대야 하는 변경 MAJOR. `latest` 는 릴리스마다 항상 함께 갱신.
+- 이미지에 `APP_VERSION` 이 들어가 `/healthz`·⚙ 설정 맨 아래에 표시된다. 로컬 빌드는 `dev`.

@@ -200,3 +200,4 @@ details.adv .field{padding-top:4px}
 .card.hist .hf .s{flex:none;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
 .card.hist .hfiles summary{cursor:pointer;padding:2px 0}
 .card.hist .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.version-line{text-align:center;margin:4px 0 0}

@@ -275,7 +275,7 @@ async def state(request: Request) -> dict[str, Any]:
         "ts": time.time(),
         "jd": {"connected": True, "state": st, "speed": speed, "speedlimit": limit,
                "captchas": len(caps), "novncUrl": s.novnc_url, "dsmUrl": s.dsm_url, "browserUrl": s.browser_url,
-               "downloadRoot": s.download_root, "pollMs": s.poll_ms,
+               "downloadRoot": s.download_root, "pollMs": s.poll_ms, "version": s.version,
                "accountAlert": lock.reason if lock.locked else None},
         "packages": views,
         "linkgrabber": {

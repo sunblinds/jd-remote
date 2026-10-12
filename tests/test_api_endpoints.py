@@ -388,3 +388,8 @@ def test_history_clear_by_query_keeps_others(client):
     client.post("/api/links", json={"text": "https://drop.example/c"})
     assert client.delete("/api/history?q=drop.example").json()["deleted"] == 2
     assert [r["urls"][0] for r in client.get("/api/history").json()] == ["https://keep.example/a"]
+
+
+def test_version_exposed_in_healthz_and_state(client):
+    assert client.get("/healthz").json()["version"] == "dev"           # 로컬/테스트 빌드 기본값
+    assert client.get("/api/state").json()["jd"]["version"] == "dev"

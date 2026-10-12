@@ -141,7 +141,7 @@ async def sw():
 async def healthz(request: Request):
     try:
         st = await request.app.state.jd.state()
-        return {"ok": True, "jd": st}
+        return {"ok": True, "jd": st, "version": request.app.state.settings.version}
     except JDUnavailable as e:
         return JSONResponse({"ok": False, "jd": None, "error": str(e)}, status_code=503)
     except JDError as e:

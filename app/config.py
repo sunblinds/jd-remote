@@ -22,6 +22,7 @@ class Settings:
     novnc_url: str
     dsm_url: str
     browser_url: str
+    version: str
     poll_ms: int
     cookie_days: int
     jd_timeout_s: float
@@ -42,6 +43,7 @@ def load() -> Settings:
         novnc_url=_env("NOVNC_URL", "") or "",
         dsm_url=_env("DSM_URL", "") or "",
         browser_url=_env("BROWSER_URL", "") or "",   # 폰용 TeraBox 쿠키 갱신 크롬(browser/). 비우면 아이콘 숨김
+        version=_env("APP_VERSION", "dev") or "dev",   # 이미지 빌드 시 넣는 릴리스 버전(Dockerfile ARG)
         poll_ms=int(_env("POLL_MS", "3000") or 3000),
         cookie_days=int(_env("COOKIE_DAYS", "30") or 30),
         jd_timeout_s=float(_env("JD_TIMEOUT_S", "10") or 10),

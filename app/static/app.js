@@ -85,6 +85,7 @@
     $('#banners').innerHTML = b.map((x, i) => `<div class="banner ${x.k}"><span class="txt">${esc(x.t)}</span>${x.a ? (x.a.href ? `<a class="btn small" target="_blank" rel="noopener" href="${esc(x.a.href)}">${esc(x.a.label)}</a>` : `<button class="btn small" data-banner="${i}">${esc(x.a.label)}</button>`) : ''}</div>`).join('');
     $$('[data-banner]').forEach((el) => el.addEventListener('click', () => b[+el.dataset.banner].a.onclick()));
     state.server.novncUrl = jd.novncUrl || ''; state.server.browserUrl = jd.browserUrl || ''; applyLinks();
+    if (jd.version) $('#appVersion').textContent = 'jd-remote ' + (/^\d/.test(jd.version) ? 'v' + jd.version : jd.version);
     if (jd.downloadRoot) { $('#dlRootText').textContent = '기본 다운로드 폴더: ' + jd.downloadRoot; setDownloadRoot(jd.downloadRoot); }
     if (jd.pollMs && !LS.get('pollMs', null)) state.pollMs = jd.pollMs;
   }

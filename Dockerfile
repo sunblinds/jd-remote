@@ -1,5 +1,7 @@
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+# 릴리스 버전(scripts/publish-dockerhub.sh 가 --build-arg 로 넣음). 로컬 빌드는 dev
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /srv
 COPY requirements.txt .
 RUN pip install -r requirements.txt
