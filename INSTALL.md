@@ -225,7 +225,7 @@ latest 이미지를 다시 받아 컨테이너만 교체하며, `.env` 와 `jd-r
 | `0.7.0` | 정확히 그 버전, 바뀌지 않음 | 고정하거나 문제가 생겨 되돌릴 때 |
 
 바꾸려면 스크립트의 `IMAGE=` 를 `sunblinds/jd-remote:<태그>` 로 고쳐 실행하세요. 다시 `latest` 로 바꾸면 최신으로 돌아옵니다.
-버전별 변경 내용은 [GitHub 릴리스 태그](https://github.com/bitsets/jd-remote/tags)를 참고하세요.
+버전별 변경 내용은 [GitHub 릴리스 태그](https://github.com/sunblinds/jd-remote/tags)를 참고하세요.
 
 ---
 

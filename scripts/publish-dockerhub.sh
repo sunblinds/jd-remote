@@ -50,7 +50,7 @@ git archive --format=tar HEAD Dockerfile requirements.txt app | ssh -o BatchMode
   \$D build --pull --build-arg APP_VERSION=$VERSION $TARGS \
     --label org.opencontainers.image.version=$VERSION \
     --label org.opencontainers.image.revision=$SHORT \
-    --label org.opencontainers.image.source=https://github.com/bitsets/jd-remote \$W
+    --label org.opencontainers.image.source=https://github.com/sunblinds/jd-remote \$W
   for t in $TAGS; do \$D push $IMAGE:\$t; done
   \$D image inspect $IMAGE:$VERSION --format 'image {{.Id}} {{.Architecture}} version={{index .Config.Labels \"org.opencontainers.image.version\"}}'
 "
