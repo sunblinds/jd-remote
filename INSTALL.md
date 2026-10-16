@@ -3,7 +3,7 @@
 jd-remote 는 NAS 의 JDownloader 2 를 폰에서 다루는 웹앱입니다. 이 문서는 Synology DSM 사용자를 대상으로,
 SSH 없이 **DSM 작업 스케줄러**만으로 설치하고 업데이트하는 방법을 설명합니다.
 
-- 이미지: Docker Hub `bytesets/jd-remote:latest` (linux/amd64)
+- 이미지: Docker Hub `sunblinds/jd-remote:latest` (linux/amd64)
 - 배포 방식: 작업 스케줄러에 "배포" 작업을 하나 만들어 두고 **수동 실행**합니다. 처음 실행하면 설치, 다시 실행하면 최신 이미지로 업데이트됩니다.
 
 ```
@@ -139,7 +139,7 @@ TZ=Asia/Seoul
 # jd-remote 배포/업데이트 — 실행할 때마다 latest 이미지를 받아 컨테이너를 교체한다.
 set -e
 D=/usr/local/bin/docker
-IMAGE=bytesets/jd-remote:latest
+IMAGE=sunblinds/jd-remote:latest
 NAME=jd-remote
 ENV_FILE=/volume1/docker/jd-remote/.env
 
@@ -179,7 +179,7 @@ $D image prune -f >/dev/null 2>&1 || true
 
 ```
 healthz: {"ok":true,"jd":"IDLE","version":"0.7.0"}
-jd-remote  Up 10 seconds (health: starting)  bytesets/jd-remote:latest
+jd-remote  Up 10 seconds (health: starting)  sunblinds/jd-remote:latest
 ```
 
 `"jd":"IDLE"`(또는 RUNNING) 대신 연결 오류가 보이면 1-4(RemoteAPI)와 `jdnet` 연결을 확인하세요.
@@ -224,7 +224,7 @@ latest 이미지를 다시 받아 컨테이너만 교체하며, `.env` 와 `jd-r
 | `0.7` | 0.7.x 중 최신 | 버그 수정만 받고 기능 변화는 직접 고르고 싶을 때 |
 | `0.7.0` | 정확히 그 버전, 바뀌지 않음 | 고정하거나 문제가 생겨 되돌릴 때 |
 
-바꾸려면 스크립트의 `IMAGE=` 를 `bytesets/jd-remote:<태그>` 로 고쳐 실행하세요. 다시 `latest` 로 바꾸면 최신으로 돌아옵니다.
+바꾸려면 스크립트의 `IMAGE=` 를 `sunblinds/jd-remote:<태그>` 로 고쳐 실행하세요. 다시 `latest` 로 바꾸면 최신으로 돌아옵니다.
 버전별 변경 내용은 [GitHub 릴리스 태그](https://github.com/bitsets/jd-remote/tags)를 참고하세요.
 
 ---
@@ -237,7 +237,7 @@ latest 이미지를 다시 받아 컨테이너만 교체하며, `.env` 와 `jd-r
 | 상단에 "JDownloader에 연결할 수 없습니다" | 1-4 RemoteAPI 설정, `docker network connect jdnet jdownloader2` |
 | 재시작할 때마다 로그아웃 | `.env` 의 `JDR_SECRET` 이 비어 있지 않은지 |
 | 저장 위치 경로가 이상하게 보임 | `.env` 의 `DOWNLOAD_ROOT` 가 1-3 의 `/output` 마운트 경로와 같은지 |
-| 배포 작업이 `pull` 에서 실패 | NAS 의 인터넷 연결, 이미지 이름(`bytesets/jd-remote:latest`) |
+| 배포 작업이 `pull` 에서 실패 | NAS 의 인터넷 연결, 이미지 이름(`sunblinds/jd-remote:latest`) |
 | 폰에서 JD 화면(noVNC)이 로딩 바에서 멈춤 | 일부 안드로이드 기기의 H.264 디코더 문제(아래 "알려진 문제") |
 
 컨테이너 로그: 컨테이너 매니저 → 컨테이너 → `jd-remote` → 로그.
@@ -257,7 +257,7 @@ $D exec jdownloader2 sed -i 's|^supportsWebCodecsH264Decode = await _checkWebCod
 ## 5. 제거
 
 1. 작업 스케줄러에서 `jd-remote 배포` 삭제
-2. 컨테이너 매니저 → 컨테이너 `jd-remote` 중지 후 삭제, 이미지 `bytesets/jd-remote` 삭제
+2. 컨테이너 매니저 → 컨테이너 `jd-remote` 중지 후 삭제, 이미지 `sunblinds/jd-remote` 삭제
 3. (데이터까지 지우려면) 컨테이너 매니저 → 볼륨 `jd-remote-data` 삭제, `/volume1/docker/jd-remote` 폴더 삭제
 4. 리버스 프록시 항목 `jdr.<your-domain>` 삭제
 

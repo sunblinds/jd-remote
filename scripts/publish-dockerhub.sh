@@ -1,5 +1,5 @@
 #!/bin/sh
-# 릴리스: Docker Hub(bytesets/jd-remote)에 버전 태그와 latest 를 함께 올린다.
+# 릴리스: Docker Hub(sunblinds/jd-remote)에 버전 태그와 latest 를 함께 올린다.
 #
 #   scripts/publish-dockerhub.sh 0.7.0
 #
@@ -13,11 +13,11 @@
 #      - latest: 가장 최근 릴리스 — 릴리스할 때마다 '항상' 함께 갱신
 #      (1.0 이후에는 MAJOR 태그 '1' 도 함께 올린다)
 #
-# 사전: NAS 에서 한 번 `docker login -u bytesets` (Docker Hub 액세스 토큰, Read & Write) — 토큰은 NAS 에만 저장된다.
-# 환경변수: SSH_HOST(기본 nas), IMAGE(기본 bytesets/jd-remote)
+# 사전: NAS 에서 한 번 `docker login -u sunblinds` (Docker Hub 액세스 토큰, Read & Write) — 토큰은 NAS 에만 저장된다.
+# 환경변수: SSH_HOST(기본 nas), IMAGE(기본 sunblinds/jd-remote)
 set -eu
 SSH_HOST=${SSH_HOST:-nas}
-IMAGE=${IMAGE:-bytesets/jd-remote}
+IMAGE=${IMAGE:-sunblinds/jd-remote}
 VERSION=${1:-}
 cd "$(dirname "$0")/.."
 

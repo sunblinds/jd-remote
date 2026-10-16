@@ -1,6 +1,6 @@
 # jd-remote
 
-> **설치**: Synology NAS 사용자는 [INSTALL.md](INSTALL.md) — 작업 스케줄러로 설치·업데이트(`bytesets/jd-remote:latest`).
+> **설치**: Synology NAS 사용자는 [INSTALL.md](INSTALL.md) — 작업 스케줄러로 설치·업데이트(`sunblinds/jd-remote:latest`).
 
 JDownloader2를 폰에서 쓰기 위한 모바일 우선 웹앱(PWA). NAS Docker에서 JD 컨테이너 옆에 떠서
 JD 로컬 RemoteAPI(3128)를 호출한다. Transmission Remote처럼 **링크 추가 / 상태 / 완료 정리 / 일시정지·재개**가 목적.
@@ -77,7 +77,7 @@ jlesage webauth: `POST /login/login` form `username`/`password`, 요청에 쿠�
 - `downloadcontroller/getSpeedInBytes` 없음 → 패키지 `speed` 합산.
 - 쓰는 메서드: `downloadcontroller/{getCurrentState,start,stop,pause}`, `downloadsV2/{queryPackages,queryLinks,removeLinks,cleanup,setEnabled,resetLinks,forceDownload}`, `linkgrabberv2/{addLinks,queryLinks,queryPackages,isCollecting,moveToDownloadlist,removeLinks}`, `config/{get,set}`(GeneralSettings.DownloadSpeedLimit*), `captcha/list`, `accountsV2/{listAccounts,listPremiumHoster,addAccount,setUserNameAndPassword,enableAccounts,disableAccounts,refreshAccounts,removeAccounts}`.
 
-## 릴리스 (Docker Hub `bytesets/jd-remote`)
+## 릴리스 (Docker Hub `sunblinds/jd-remote`)
 ```sh
 scripts/publish-dockerhub.sh 0.7.1      # 커밋된 HEAD 를 v0.7.1 로 태그 → NAS 에서 빌드 → 0.7.1 / 0.7 / latest 푸시
 ```
